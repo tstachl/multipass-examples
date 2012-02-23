@@ -7,39 +7,45 @@ $hash = hash('sha1',$salted,true);
 $saltedHash = substr($hash,0,16);
 $iv = "OpenSSL for Ruby";
 
+// Build json data
 $user_data = array(
 	'uid' => '123abc',
 	'customer_email' => 'testuser@yoursite.com',
 	'customer_name' => 'Test User',
 	'expires' => date("c", strtotime("+5 minutes"))
 );
-
 $data = json_encode($user_data);
 
-// AES encryption: 
-//   double XOR first block
+// XOR first block of data with IV
 for ($i = 0; $i < 16; $i++) {
 	$data[$i] = $data[$i] ^ $iv[$i];
 }
 
-//   pad using block size of 16 bytes
+// pad using standard PKCS#5 padding with block size of 16 bytes
 $pad = 16 - (strlen($data) % 16);
 $data = $data . str_repeat(chr($pad), $pad);
 
-//   encrypt using AES128-cbc
+// encrypt data using AES128-cbc
 $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128,'','cbc','');
 mcrypt_generic_init($cipher, $saltedHash, $iv);
-$encryptedData = mcrypt_generic($cipher,$data);
+$multipass = mcrypt_generic($cipher,$data);
 mcrypt_generic_deinit($cipher);
 
 // Base64 encode the encrypted data
-$encryptedData = base64_encode($encryptedData);
+$multipass = base64_encode($multipass);
 
 // Convert encoded data to the URL safe variant
-$encryptedData = preg_replace('/\=$/', '', $encryptedData);
-$encryptedData = preg_replace('/\n/', '', $encryptedData);
-$encryptedData = preg_replace('/\+/', '-', $encryptedData);
-$encryptedData = preg_replace('/\//', '_', $encryptedData);
+$multipass = preg_replace('/\=$/', '', $multipass);
+$multipass = preg_replace('/\n/', '', $multipass);
+$multipass = preg_replace('/\+/', '-', $multipass);
+$multipass = preg_replace('/\//', '_', $multipass);
 
-$multipass = urlencode($encryptedData);
+// Build an HMAC-SHA1 signature using the multipass string and your API key
+$signature = hash_hmac("sha1", $multipass, $api_key, true);
+// Base64 encode the signature
+$signature = base64_encode($signature);
+
+// Finally, URL encode the multipass and signature
+$multipass = urlencode($multipass);
+$signature = urlencode($signature);
 ?>
