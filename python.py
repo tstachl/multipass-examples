@@ -10,6 +10,8 @@ from base64 import b64encode
 
 from isodate import datetime_isoformat
 from Crypto.Cipher import AES
+import hmac
+import hashlib
 
 ACCOUNT_KEY = 'YOUR SITE KEY'
 API_KEY = 'YOUR MULTIPASS API KEY'
@@ -52,5 +54,12 @@ def multipass_string(user_id, user_name, user_email):
 	# and trailing = characters.
 	return b64encode(multipass_encrypted, '-_').replace('\n', '').strip('=')
 
+def signature_string(multipass):
+	signature = hmac.new(API_KEY, multipass, hashlib.sha1).digest()
+	return b64encode(signature)
+
 if __name__ == '__main__':
-	print multipass_string('0123457', 'Jan Anonymous', 'jan@anon.anon')
+	multipass = multipass_string('0123457', 'Jan Anonymous', 'jan@anon.anon')
+	signature = signature_string(multipass)
+
+	print "Multipass: %s\nSignature: %s" % (multipass, signature)
