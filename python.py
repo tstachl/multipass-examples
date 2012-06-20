@@ -12,6 +12,7 @@ from isodate import datetime_isoformat
 from Crypto.Cipher import AES
 import hmac
 import hashlib
+import urllib
 
 ACCOUNT_KEY = 'YOUR SITE KEY'
 API_KEY = 'YOUR MULTIPASS API KEY'
@@ -49,10 +50,8 @@ def multipass_string(user_id, user_name, user_email):
 	encryptor = AES.new(salted_hash, AES.MODE_CBC, iv)
 	multipass_encrypted = encryptor.encrypt(multipass_xored)
 
-	# Encode the encrypted data using Base64 encoding, using - and _ instead 
-	# of + and / so that the encoded data is URL safe. Then remove newlines
-	# and trailing = characters.
-	return b64encode(multipass_encrypted, '-_').replace('\n', '').strip('=')
+	# Encode the encrypted data using Base64 encoding
+	return b64encode(multipass_encrypted)
 
 def signature_string(multipass):
 	signature = hmac.new(API_KEY, multipass, hashlib.sha1).digest()
@@ -61,5 +60,9 @@ def signature_string(multipass):
 if __name__ == '__main__':
 	multipass = multipass_string('0123457', 'Jan Anonymous', 'jan@anon.anon')
 	signature = signature_string(multipass)
+
+	# URL encode the multipass and signature parameters
+	multipass = urllib.quote(multipass, '')
+	signature = urllib.quote(signature, '')
 
 	print "Multipass: %s\nSignature: %s" % (multipass, signature)
