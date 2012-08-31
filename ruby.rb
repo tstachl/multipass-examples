@@ -5,6 +5,7 @@ require 'rubygems'
 require 'multipass'
 require 'openssl'
 require 'cgi'
+require 'time'
 
 SITE_KEY = "Your Site Key"
 API_KEY = "Your API Key"
@@ -15,7 +16,7 @@ multipass_string = MultiPass.encode(
   :customer_name => "John Doe",
   :customer_email => "john.doe@yoursite.com",
   :uid => "123456",
-  :expires => (Time.now + 120), # Expire two minutes from now
+  :expires => (Time.now + 120).iso8601, # Expire two minutes from now
   :url_safe => true # Convert unsafe characters
 )
 
