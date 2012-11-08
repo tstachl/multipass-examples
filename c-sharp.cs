@@ -67,12 +67,6 @@ namespace Sypher.Multipass
             for (var i = 0; i < 16; i++)
                 data[i] = (byte)(data[i] ^ bIV[i]);
 
-            // Pad using block size of 16 bytes
-            int pad = 16 - (data.Length % 16);
-            Array.Resize(ref data, data.Length + pad);
-            for (var i = 0; i < pad; i++)
-                data[data.Length - pad + i] = (byte)pad;
-
             // Use the AesManaged object to do the encryption
             using (AesManaged aesAlg = new AesManaged())
             {
