@@ -1,11 +1,14 @@
 <?php
-$account_key = 'YOUR SITE KEY';
-$api_key     = 'YOUR MULTIPASS API KEY';
+$subdomain = 'YOUR DESK.COM SUBDOMAIN';
+$api_key   = 'YOUR MULTIPASS API KEY';
 
-$salted = $api_key . $account_key;
-$hash = hash('sha1',$salted,true);
-$saltedHash = substr($hash,0,16);
-$iv = "OpenSSL for Ruby";
+// Create the encryption key using a 16 byte SHA1 digest of your api key and subdomain
+$salted = $api_key . $subdomain;
+$digest = hash('sha1', $salted, true);
+$key    = substr($digest, 0, 16);
+
+// Generate a random 16 byte IV
+$iv = mcrypt_create_iv(16);
 
 // Build json data
 $user_data = array(
@@ -16,31 +19,25 @@ $user_data = array(
 );
 $data = json_encode($user_data);
 
-// XOR first block of data with IV
-for ($i = 0; $i < 16; $i++) {
-	$data[$i] = $data[$i] ^ $iv[$i];
-}
-
-// pad using standard PKCS#5 padding with block size of 16 bytes
+// PHP's mcrypt library does not perform padding by default
+// Pad using standard PKCS#5 padding with block size of 16 bytes
 $pad = 16 - (strlen($data) % 16);
 $data = $data . str_repeat(chr($pad), $pad);
 
-// encrypt data using AES128-cbc
+// Encrypt data using AES128-cbc
 $cipher = mcrypt_module_open(MCRYPT_RIJNDAEL_128,'','cbc','');
-mcrypt_generic_init($cipher, $saltedHash, $iv);
+mcrypt_generic_init($cipher, $key, $iv);
 $multipass = mcrypt_generic($cipher,$data);
 mcrypt_generic_deinit($cipher);
+
+// Prepend the IV to the encrypted data
+// This will be extracted and used for decryption
+$multipass = $iv . $multipass;
 
 // Base64 encode the encrypted data
 $multipass = base64_encode($multipass);
 
-// Convert encoded data to the URL safe variant
-$multipass = preg_replace('/\=$/', '', $multipass);
-$multipass = preg_replace('/\n/', '', $multipass);
-$multipass = preg_replace('/\+/', '-', $multipass);
-$multipass = preg_replace('/\//', '_', $multipass);
-
-// Build an HMAC-SHA1 signature using the multipass string and your API key
+// Build an HMAC-SHA1 signature using the encoded string and your api key
 $signature = hash_hmac("sha1", $multipass, $api_key, true);
 // Base64 encode the signature
 $signature = base64_encode($signature);
@@ -48,4 +45,7 @@ $signature = base64_encode($signature);
 // Finally, URL encode the multipass and signature
 $multipass = urlencode($multipass);
 $signature = urlencode($signature);
+
+print "multipass: " . $multipass . "\n";
+print "signature: " . $signature . "\n";
 ?>
